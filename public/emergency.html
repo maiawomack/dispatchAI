@@ -1,0 +1,163 @@
+Here it is — copy everything:
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Emergency Video</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #status-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #c0392b;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      z-index: 10;
+    }
+
+    #status-bar.active { background: #27ae60; }
+    #status-bar.connecting { background: #e67e22; }
+
+    video {
+      width: 100%;
+      max-height: 75dvh;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    #info {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #aaa;
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    #frame-counter {
+      font-size: 12px;
+      color: #555;
+      margin-top: 8px;
+    }
+
+    #start-btn {
+      margin-top: 24px;
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 16px 40px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #start-btn:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+  <div id="status-bar">TAP BELOW TO START</div>
+
+  <video id="video" autoplay playsinline muted></video>
+
+  <button id="start-btn" onclick="startCapture()">START CAMERA</button>
+
+  <p id="info">Point your camera at the scene.<br/>Dispatchers can see your feed.</p>
+  <p id="frame-counter"></p>
+
+  <script>
+    const params     = new URLSearchParams(window.location.search);
+    const SESSION_ID = params.get("session") || "unknown";
+
+    const BACKEND_URL    = "http://localhost:3000";
+    const FRAME_INTERVAL = 3000;
+
+    let frameCount = 0;
+    let intervalId = null;
+
+    async function startCapture() {
+      const btn = document.getElementById("start-btn");
+      const bar = document.getElementById("status-bar");
+
+      btn.style.display = "none";
+      bar.textContent = "CONNECTING…";
+      bar.className = "connecting";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+            width:  { ideal: 640 },
+            height: { ideal: 480 },
+          },
+          audio: false,
+        });
+
+        const video = document.getElementById("video");
+        video.srcObject = stream;
+
+        bar.textContent = "🔴 LIVE — Dispatchers Connected";
+        bar.className = "active";
+
+        intervalId = setInterval(() => captureFrame(video), FRAME_INTERVAL);
+
+      } catch (err) {
+        bar.textContent = "Camera access denied — please allow and reload";
+        bar.className = "";
+        btn.style.display = "block";
+        console.error("Camera error:", err);
+      }
+    }
+
+    function captureFrame(video) {
+      const canvas = document.createElement("canvas");
+      canvas.width  = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, 640, 480);
+
+      const frameData = canvas.toDataURL("image/jpeg", 0.7);
+
+      frameCount++;
+      document.getElementById("frame-counter").textContent =
+        `Frames sent: ${frameCount} | Session: ${SESSION_ID.slice(0, 8)}…`;
+
+      sendFrame(frameData);
+    }
+
+    async function sendFrame(base64Frame) {
+      try {
+        await fetch(BACKEND_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: SESSION_ID,
+            timestamp:  Date.now(),
+            frame:      base64Frame,
+          }),
+        });
+      } catch (err) {
+        console.warn("Frame send failed, will retry:", err.message);
+      }
+    }
+  </script>
+
+</body>
+</html>

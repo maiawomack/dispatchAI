@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>911 Dispatch — Incoming Call</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 40px 20px;
+    }
+    .badge {
+      display: inline-block;
+      background: #c0392b;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+    .subtitle { font-size: 14px; color: #888; }
+    .qr-container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .qr-label { font-size: 12px; color: #333; text-align: center; font-weight: 500; }
+    .session-info {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+    }
+    .session-info span { color: #fff; font-family: monospace; font-size: 12px; }
+    .link-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 12px;
+      color: #27ae60;
+      font-family: monospace;
+      word-break: break-all;
+      text-align: center;
+      max-width: 400px;
+    }
+    .btn {
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 32px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+  <div style="text-align:center">
+    <div class="badge">INCOMING 911 CALL</div>
+    <h1>Emergency Video Link</h1>
+    <p class="subtitle">Caller scans QR code to start video feed</p>
+  </div>
+
+  <div class="qr-container">
+    <div id="qr-code"></div>
+    <p class="qr-label">Point phone camera here</p>
+  </div>
+
+  <div class="session-info">
+    Session ID: <span id="session-display">generating...</span>
+  </div>
+
+  <div class="link-box" id="link-display">generating link...</div>
+
+  <button class="btn" onclick="generateNew()">New Session</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const BASE_URL = "https://berkely-ai-hacks.vercel.app/emergency.html";
+
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    let qrInstance = null;
+
+    function generateNew() {
+      const sessionId = generateUUID();
+      const link = `${BASE_URL}?session=${sessionId}`;
+
+      document.getElementById('session-display').textContent = sessionId.slice(0, 8) + '...';
+      document.getElementById('link-display').textContent = link;
+
+      const container = document.getElementById('qr-code');
+      container.innerHTML = '';
+
+      qrInstance = new QRCode(container, {
+        text: link,
+        width: 220,
+        height: 220,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    window.onload = generateNew;
+  </script>
+
+</body>
+</html>
