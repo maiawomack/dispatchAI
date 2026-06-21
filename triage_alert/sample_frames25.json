@@ -220,7 +220,7 @@
     "injury_visible": true,
     "injury_severity_estimate": "minor",
     "injury_location": "wrist",
-    "bleeding_visible": false,
+    "bleeding_visible": true,
     "bleeding_severity_estimate": "none",
     "smoke_visible": false,
     "fire_visible": false,

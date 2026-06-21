@@ -14,7 +14,7 @@ from uagents import Protocol
 # TRIAGE_AGENT_ADDRESS = "agent1q2fu34yahnp7k8t0kyk44kwhn2jlmhe4vl9ljr5z0e93zmh9q5kgz3fmn2v"
 TRIAGE_AGENT_ADDRESS = "agent1q09ckygsh9kh4hgk0vpd405e3v6yufujkg4klpm6v26rud4eelhvuazjaz2"
 
-with open("sample_frames.json") as f:
+with open("sample_frames25.json") as f:
     frames = json.load(f)
 
 sender = Agent(
