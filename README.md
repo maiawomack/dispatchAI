@@ -74,3 +74,5 @@ Example Queries
 "Is this a medical emergency or a fire?"
 "What hazards are present?"
 "Generate a dispatch brief for this incident"
+
+ASI1 Chat Session: https://asi1.ai/shared-chat/e6472b3f-05ab-4cab-b7ba-b0898348543a
