@@ -51,7 +51,7 @@ app.get("/server-url", (req, res) => {
 });
 
 app.post("/analyze", async (req, res) => {
-  const { frame, mimeType, model } = req.body;
+  const { frame, mimeType, model, audioSignal } = req.body;
 
   if (!frame) {
     return res.status(400).json({ error: "Missing frame data" });
@@ -65,7 +65,14 @@ app.post("/analyze", async (req, res) => {
       : "claude-sonnet-4-6";
     const result = await analyzeFrame(frame, mimeType || "image/jpeg", modelId);
     result.timestamp = timestamp;
-    console.log(`[${timestamp}] frame_quality=${result.frame_quality} confidence=${result.confidence}`);
+
+    // Merge audio distress so triage server can factor it in
+    if (audioSignal?.tone === "elevated" && audioSignal.distress_keywords_detected?.length) {
+      result.audio_distress = true;
+      result.audio_keywords = audioSignal.distress_keywords_detected;
+    }
+
+    console.log(`[${timestamp}] frame_quality=${result.frame_quality} confidence=${result.confidence}${result.audio_distress ? " AUDIO_DISTRESS" : ""}`);
 
     const triage = await callTriage(result);
     if (triage?.alert) console.log(`[${timestamp}] triage alert: ${triage.reason}`);
@@ -85,6 +92,38 @@ app.post("/analyze", async (req, res) => {
         timestamp,
       },
     });
+  }
+});
+
+app.post("/triage-audio", async (req, res) => {
+  const { audioSignal, transcript } = req.body;
+  if (!audioSignal) return res.status(400).json({ error: "Missing audioSignal" });
+
+  const syntheticFrame = {
+    people_count: 1,
+    injury_visible: false,
+    injury_severity_estimate: "none",
+    injury_location: null,
+    bleeding_visible: false,
+    bleeding_severity_estimate: "none",
+    smoke_visible: false,
+    fire_visible: false,
+    person_motion: "unknown",
+    person_responsive: "unknown",
+    silent_distress: false,
+    audio_distress: true,
+    audio_keywords: audioSignal.distress_keywords_detected || [],
+    hazards: ["audio_distress"],
+    confidence: audioSignal.confidence || 0.7,
+    notes: transcript ? `Caller audio: "${transcript.slice(-200)}"` : "Audio distress detected",
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const triage = await callTriage(syntheticFrame);
+    res.json(triage || { alert: false });
+  } catch (err) {
+    res.json({ alert: false });
   }
 });
 

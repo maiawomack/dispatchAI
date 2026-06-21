@@ -493,9 +493,10 @@ const statusEl  = document.getElementById("status");
 
     // Each entry: { videoScore, audioSignal }
     const signalHistory = [];
-    let lastGlanceKey = null;
-    let lastAlert = null;
-    let lastAlertTime = null;
+    let lastGlanceKey   = null;
+    let lastAlert       = null;
+    let lastAlertTime   = null;
+    let lastAudioLogTime = 0;
 
     function scoreSeverity(r) {
       let s = 0;
@@ -523,29 +524,25 @@ const statusEl  = document.getElementById("status");
     }
 
     function computeCombinedTrend() {
-      if (signalHistory.length < 4)
-        return { trend: "stable", videoContrib: false, audioContrib: false };
+      // Audio: react to CURRENT signal immediately — no history required
+      const curAudio      = latestAudioSignal;
+      const audioContrib  = curAudio.tone === "elevated" && curAudio.distress_keywords_detected.length >= 1;
 
-      // Video: compare older half vs recent half of video scores
+      // Video: need at least 4 frames to compute a meaningful rolling trend
+      if (signalHistory.length < 4) {
+        return { trend: audioContrib ? "rising" : "stable", videoContrib: false, audioContrib };
+      }
+
       const half      = Math.floor(signalHistory.length / 2);
       const olderAvg  = signalHistory.slice(0, half).reduce((a,e) => a + e.videoScore, 0) / half;
       const recentAvg = signalHistory.slice(half).reduce((a,e) => a + e.videoScore, 0) / (signalHistory.length - half);
       const videoRising  = recentAvg > olderAvg + 6;
       const videoFalling = recentAvg < olderAvg - 6;
-
-      // Audio: require 2+ of last 4 entries to be elevated, OR 3+ distress keywords total
-      // (single reading alone does not trigger)
-      const last4         = signalHistory.slice(-4).map(e => e.audioSignal);
-      const elevatedCount = last4.filter(a => a.tone === "elevated").length;
-      const totalKeywords = last4.reduce((sum, a) => sum + a.distress_keywords_detected.length, 0);
-      const audioElevated = elevatedCount >= 2 || totalKeywords >= 3;
-
       const videoContrib = videoRising || videoFalling;
-      const audioContrib = audioElevated;
 
       let trend = "stable";
-      if (videoRising || audioElevated) trend = "rising";
-      else if (videoFalling)            trend = "falling";
+      if (videoRising || audioContrib) trend = "rising";
+      else if (videoFalling)           trend = "falling";
 
       return { trend, videoContrib, audioContrib };
     }
@@ -768,7 +765,7 @@ const statusEl  = document.getElementById("status");
         const resp = await fetch("/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg", model: useHaiku ? "haiku" : "sonnet" }),
+          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg", model: useHaiku ? "haiku" : "sonnet", audioSignal: latestAudioSignal }),
         });
 
         const body = await resp.json();
@@ -913,14 +910,37 @@ const statusEl  = document.getElementById("status");
     }
 
     function onNewSpeech() {
-      // Update audio signal on every new speech result (sampled into history on next video frame)
       latestAudioSignal = analyzeAudioSignal(fullTranscript);
 
-      // Language detection: debounced, runs passively every 3s of new speech
+      // Immediate distress reaction — don't wait for the next video frame
+      const sig = latestAudioSignal;
+      const now = Date.now();
+      if (sig.tone === "elevated" && sig.distress_keywords_detected.length >= 1
+          && now - lastAudioLogTime > 8000) {
+        lastAudioLogTime = now;
+        const kws = sig.distress_keywords_detected.slice(0, 4).join(", ");
+        appendLog(`audio distress: ${kws}`, sig.confidence);
+        // Flash the alert line so dispatcher sees it immediately
+        lastAlert     = `audio distress — ${kws}`;
+        lastAlertTime = now;
+        document.getElementById("alert-line").textContent = `${lastAlert} — 0s ago`;
+        document.getElementById("alert-line").style.display = "block";
+        // Forward to triage server
+        fetch("/triage-audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audioSignal: sig, transcript: fullTranscript.slice(-400) }),
+        }).then(r => r.json()).then(t => {
+          if (t?.alert && t.triage) {
+            document.getElementById("triage-panel").style.display = "block";
+            document.getElementById("triage-text").textContent = t.triage;
+          }
+        }).catch(() => {});
+      }
+
       clearTimeout(detectTimer);
       detectTimer = setTimeout(runDetect, 3000);
 
-      // Translation: if active, debounce and run after each final result
       if (translateActive) {
         clearTimeout(translateTimer);
         translateTimer = setTimeout(runTranslate, 1200);

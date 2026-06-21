@@ -28,6 +28,8 @@ You receive structured JSON from a VisionAgent describing a live emergency scene
 - person_responsive: whether the person is "responsive" or "unresponsive"
 - silent_distress: whether a silent distress signal was detected (boolean) — highest priority signal; person may be coerced or unable to speak freely
 - silent_distress_description: description of what was observed, or null
+- audio_distress: whether the caller verbally expressed distress keywords (boolean) — treat as high-priority even without visual confirmation
+- audio_keywords: list of distress keywords detected in the caller's speech
 - hazards: list of detected hazards (may include "silent_distress", "weapon_visible")
 - confidence: confidence score of the analysis (0-1)
 - notes: free-text observation notes
@@ -58,7 +60,8 @@ Urgency scale (use internally to determine STATUS):
 5 = Critical, mass casualty or life-threatening scene
 
 Rules:
-- If silent_distress is true, urgency is at least 4 regardless of other signals; DISPATCH must include law enforcement (possible coercion or domestic violence)
+- If silent_distress is true, urgency is at least 4; DISPATCH must include law enforcement (possible coercion or domestic violence)
+- If audio_distress is true, urgency is at least 3; include the caller's keywords in SCENE SUMMARY
 - If confidence is below 0.3, prepend "LOW CONFIDENCE ASSESSMENT —" to the STATUS line
 - If fire is visible, always include Fire units
 - If person is unresponsive, urgency is at least 4
@@ -139,12 +142,16 @@ def adapt_frame(rich: dict) -> dict:
     hazards = list(rich.get("hazards") or [])
     if rich.get("silent_distress") and "silent_distress" not in hazards:
         hazards.insert(0, "silent_distress")
+    if rich.get("audio_distress") and "audio_distress" not in hazards:
+        hazards.insert(0, "audio_distress")
     if (rich.get("objects") or {}).get("weapons_visible") and "weapon_visible" not in hazards:
         hazards.append("weapon_visible")
 
     notes_parts = []
     if rich.get("silent_distress") and rich.get("silent_distress_description"):
         notes_parts.append(f"SILENT DISTRESS: {rich['silent_distress_description']}")
+    if rich.get("audio_distress") and rich.get("audio_keywords"):
+        notes_parts.append(f"AUDIO DISTRESS — caller said distress keywords: {', '.join(rich['audio_keywords'][:5])}")
     if rich.get("notes"):
         notes_parts.append(rich["notes"])
 
@@ -162,6 +169,8 @@ def adapt_frame(rich: dict) -> dict:
         "hazards":                     hazards,
         "silent_distress":             rich.get("silent_distress", False),
         "silent_distress_description": rich.get("silent_distress_description"),
+        "audio_distress":              rich.get("audio_distress", False),
+        "audio_keywords":              rich.get("audio_keywords") or [],
         "frame_quality":               rich.get("frame_quality", "unknown"),
         "confidence":                  rich.get("confidence", 0),
         "notes":                       " | ".join(notes_parts),
@@ -191,6 +200,10 @@ def check_significant_change(previous_scene: dict, current_scene: dict) -> dict:
     if not previous_scene.get("silent_distress") and current_scene.get("silent_distress"):
         desc = current_scene.get("silent_distress_description") or "visual signal"
         fast_flags.append(f"silent distress detected: {desc}")
+
+    if not previous_scene.get("audio_distress") and current_scene.get("audio_distress"):
+        kws = current_scene.get("audio_keywords") or []
+        fast_flags.append(f"caller audio distress: {', '.join(kws[:4]) if kws else 'distress keywords detected'}")
 
     if not previous_scene.get("fire_visible") and current_scene.get("fire_visible"):
         fast_flags.append("fire detected for the first time")
