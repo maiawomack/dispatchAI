@@ -116,6 +116,57 @@
 
     #log-box .entry { margin-bottom: 2px; }
     #log-box .entry.err { color: #ff6666; }
+
+    #audio-section {
+      width: 480px;
+      max-width: 100%;
+    }
+
+    #audio-section h2 {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    #audio-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    #mic-status {
+      font-size: 0.72rem;
+      color: #666;
+      margin-bottom: 8px;
+      height: 1.2em;
+    }
+
+    .audio-row {
+      margin-bottom: 8px;
+    }
+
+    .audio-row label {
+      display: block;
+      font-size: 0.68rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 3px;
+    }
+
+    .audio-value {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      min-height: 2em;
+      color: #ccc;
+    }
+
+    .audio-value.highlight { color: #44ff88; }
+    .btn-recording { border-color: #ff4444 !important; color: #ff4444 !important; }
   </style>
 </head>
 <body>
@@ -139,6 +190,27 @@
   <div id="log">
     <h2>Frame Log</h2>
     <div id="log-box"></div>
+  </div>
+
+  <div id="audio-section">
+    <h2>Audio — Language Detection &amp; Translation</h2>
+    <div id="audio-controls">
+      <button id="btn-detect-lang">Detect Language</button>
+      <button id="btn-translate" disabled>Translate to English</button>
+    </div>
+    <div id="mic-status">idle</div>
+    <div class="audio-row">
+      <label>Transcript (what was heard)</label>
+      <div class="audio-value" id="transcript-box">—</div>
+    </div>
+    <div class="audio-row">
+      <label>Detected Language</label>
+      <div class="audio-value highlight" id="lang-box">—</div>
+    </div>
+    <div class="audio-row">
+      <label>English Translation</label>
+      <div class="audio-value" id="translation-box">—</div>
+    </div>
   </div>
 
   <script>
@@ -293,6 +365,103 @@
 
     btnStart.addEventListener("click", startCapture);
     btnStop.addEventListener("click",  stopCapture);
+
+    // --- Audio: language detection + translation ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btnDetect      = document.getElementById("btn-detect-lang");
+    const btnTranslate   = document.getElementById("btn-translate");
+    const transcriptBox  = document.getElementById("transcript-box");
+    const langBox        = document.getElementById("lang-box");
+    const translationBox = document.getElementById("translation-box");
+    const micStatus      = document.getElementById("mic-status");
+
+    let capturedTranscript = "";
+    let detectedLanguage   = "";
+
+    function setMicStatus(msg) { micStatus.textContent = msg; }
+
+    function startListening() {
+      if (!SpeechRecognition) {
+        setMicStatus("Speech recognition not supported — use Chrome or Edge");
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous    = false;
+      recognition.interimResults = false;
+      // Empty lang lets the browser use its default, which works for many languages
+      recognition.lang = "";
+
+      btnDetect.disabled = true;
+      btnDetect.classList.add("btn-recording");
+      btnTranslate.disabled = true;
+      transcriptBox.textContent  = "";
+      langBox.textContent        = "—";
+      translationBox.textContent = "—";
+      setMicStatus("listening — speak now…");
+
+      recognition.onresult = async (e) => {
+        capturedTranscript = e.results[0][0].transcript;
+        transcriptBox.textContent = capturedTranscript;
+        setMicStatus("detecting language…");
+
+        try {
+          const resp = await fetch("/detect-language", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: capturedTranscript }),
+          });
+          const data = await resp.json();
+          detectedLanguage = data.language || "Unknown";
+          langBox.textContent = `${data.language} (${data.language_code}) — ${Math.round((data.confidence || 0) * 100)}% confidence`;
+          // Only enable translate if not already English
+          btnTranslate.disabled = (data.language_code === "en");
+          setMicStatus("done — click Translate to English if needed");
+        } catch (err) {
+          setMicStatus(`detection error: ${err.message}`);
+        }
+
+        btnDetect.disabled = false;
+        btnDetect.classList.remove("btn-recording");
+      };
+
+      recognition.onerror = (e) => {
+        setMicStatus(`mic error: ${e.error}`);
+        btnDetect.disabled = false;
+        btnDetect.classList.remove("btn-recording");
+      };
+
+      recognition.onend = () => {
+        btnDetect.classList.remove("btn-recording");
+        btnDetect.disabled = false;
+        if (!capturedTranscript) setMicStatus("no speech detected — try again");
+      };
+
+      recognition.start();
+    }
+
+    async function translateText() {
+      if (!capturedTranscript) return;
+      btnTranslate.disabled = true;
+      translationBox.textContent = "translating…";
+
+      try {
+        const resp = await fetch("/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: capturedTranscript, from_language: detectedLanguage }),
+        });
+        const data = await resp.json();
+        translationBox.textContent = data.translation || "(empty)";
+      } catch (err) {
+        translationBox.textContent = `error: ${err.message}`;
+      }
+
+      btnTranslate.disabled = false;
+    }
+
+    btnDetect.addEventListener("click",    startListening);
+    btnTranslate.addEventListener("click", translateText);
   </script>
 </body>
 </html>
