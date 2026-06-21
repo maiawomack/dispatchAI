@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 import json
+import atexit
 
 import anthropic
 from uagents import Context, Protocol, Agent
@@ -19,10 +20,11 @@ from opentelemetry.trace import StatusCode
 # ── Arize tracing setup ──────────────────────────────────────────────────────
 
 tracer_provider = register(
-    space_id="YOUR_ARIZE_SPACE_ID",
-    api_key="YOUR_ARIZE_API_KEY",
-    model_id="dispatch-ai-triage-agent",
+    space_id="",
+    api_key="",
+    project_name="dispatch-ai-triage-agent",
 )
+atexit.register(tracer_provider.force_flush)
 
 # Instrument the Anthropic client so every API call is auto-traced
 from openinference.instrumentation.anthropic import AnthropicInstrumentor
