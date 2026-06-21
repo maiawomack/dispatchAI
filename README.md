@@ -55,7 +55,7 @@ Timestamp:    2026-06-20T18:45:00Z
 
 What Makes This Different
 
-Traditional systems like Axon require the dispatch center to buy in with enterprise contracts and integration work. Our system requires nothing from the dispatch center — the agent outputs a standard CAD-compatible summary that any center can read. The innovation is pushing intelligence to the civilian side so the infrastructure barrier disappears entirely.
+Our system requires nothing from the dispatch center, the agent outputs a standard CAD-compatible summary that any center can read. The innovation is pushing intelligence to the civilian side so the infrastructure barrier disappears entirely.
 
 Example Queries
 
