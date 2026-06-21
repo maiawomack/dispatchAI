@@ -16,7 +16,7 @@ from flask import Flask, request, jsonify
 from triage_logic import adapt_frame, check_significant_change, run_triage
 
 app    = Flask(__name__)
-_state = {"last_scene": None}
+_state = {"last_scene": None, "last_triage": None}
 
 
 @app.route("/health")
@@ -45,9 +45,10 @@ def triage():
     _state["last_scene"] = frame
 
     if not should_alert:
-        return jsonify({"alert": False, "reason": reason})
+        return jsonify({"alert": False, "reason": reason, "last_triage": _state["last_triage"]})
 
     triage_text = run_triage(json.dumps(frame))
+    _state["last_triage"] = triage_text
     return jsonify({"alert": True, "triage": triage_text, "reason": reason})
 
 
