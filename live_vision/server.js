@@ -39,7 +39,7 @@ function callTriage(frameResult) {
   });
 }
 const PORT = 3000;
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -132,7 +132,7 @@ app.post("/detect-language", async (req, res) => {
   if (!text) return res.status(400).json({ error: "Missing text" });
 
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 128,
       messages: [{
@@ -156,7 +156,7 @@ app.post("/translate", async (req, res) => {
   if (!text) return res.status(400).json({ error: "Missing text" });
 
   try {
-    const response = await client.messages.create({
+    const response = await getClient().messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 512,
       messages: [{
