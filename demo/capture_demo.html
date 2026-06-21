@@ -38,55 +38,137 @@
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
-
     button:hover { background: #2a2a2a; }
     button:disabled { opacity: 0.35; cursor: default; }
 
     #status { font-size: 0.75rem; color: #888; }
+    canvas  { display: none; }
 
-    canvas { display: none; }
+    /* ── Incoming call overlay ── */
+    #call-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #060606;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
 
-    /* ── File picker row ── */
-    #file-row {
+    #call-brand {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      color: #333;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    #call-type {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    #call-name {
+      font-size: 1.5rem;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      color: #e0e0e0;
+      margin-bottom: 4px;
+    }
+
+    #call-sub {
+      font-size: 0.72rem;
+      color: #444;
+      letter-spacing: 0.1em;
+      margin-bottom: 60px;
+    }
+
+    /* Phone icon + rings */
+    #phone-wrap {
+      position: relative;
+      width: 96px;
+      height: 96px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      background: #0f0f0f;
-      border: 1px solid #2a2a2a;
-      width: 100%;
-      max-width: 1280px;
+      justify-content: center;
+      margin-bottom: 64px;
     }
 
-    #file-row label {
-      font-size: 0.73rem;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid #22cc6644;
+      animation: ring-expand 2s ease-out infinite;
+    }
+    .ring-1 { width: 96px;  height: 96px;  animation-delay: 0s;    }
+    .ring-2 { width: 96px;  height: 96px;  animation-delay: 0.65s; }
+    .ring-3 { width: 96px;  height: 96px;  animation-delay: 1.3s;  }
+
+    @keyframes ring-expand {
+      0%   { transform: scale(1);   opacity: 0.7; }
+      100% { transform: scale(2.8); opacity: 0;   }
     }
 
-    #video-file {
-      flex: 1;
-      background: #111;
-      border: 1px solid #333;
-      color: #aaa;
-      padding: 5px 8px;
+    #phone-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: #1a3a22;
+      border: 2px solid #22cc66;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      position: relative;
+      z-index: 1;
+      animation: phone-ring 1.4s ease-in-out infinite;
+      box-shadow: 0 0 18px #22cc6644;
+    }
+
+    @keyframes phone-ring {
+      0%,50%,100% { transform: rotate(0deg); }
+      10%,30%     { transform: rotate(-12deg); }
+      20%,40%     { transform: rotate(12deg); }
+    }
+
+    /* Accept button */
+    #btn-accept {
+      padding: 14px 48px;
+      border-radius: 40px;
+      border: none;
+      background: #22cc66;
+      color: #000;
       font-family: inherit;
-      font-size: 0.78rem;
-    }
-
-    #video-file::file-selector-button {
-      background: #1a1a1a;
-      border: 1px solid #444;
-      color: #e0e0e0;
-      padding: 4px 12px;
-      font-family: inherit;
-      font-size: 0.78rem;
+      font-size: 0.9rem;
+      font-weight: bold;
+      letter-spacing: 0.15em;
       cursor: pointer;
-      margin-right: 10px;
+      text-transform: uppercase;
+      box-shadow: 0 0 20px #22cc6666;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    #btn-accept:hover {
+      background: #33ee77;
+      box-shadow: 0 0 28px #33ee7788;
+      transform: scale(1.04);
+    }
+    #btn-accept:active { transform: scale(0.97); }
+
+    /* Fade-out transition */
+    #call-screen.fade-out {
+      animation: fade-out 0.5s ease forwards;
+    }
+    @keyframes fade-out {
+      from { opacity: 1; }
+      to   { opacity: 0; pointer-events: none; }
     }
 
+    /* ── Main UI ── */
     #main-row {
       display: flex;
       gap: 20px;
@@ -151,15 +233,11 @@
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
-    .sev-stable   #severity-label, .text-stable   { color: #44ff88; }
-    .sev-elevated #severity-label, .text-elevated { color: #ffaa44; }
-    .sev-critical #severity-label, .text-critical { color: #ff4444; }
+    .text-stable   { color: #44ff88; }
+    .text-elevated { color: #ffaa44; }
+    .text-critical { color: #ff4444; }
 
-    #trend-label {
-      font-size: 0.75rem;
-      color: #555;
-      margin-left: auto;
-    }
+    #trend-label { font-size: 0.75rem; color: #555; margin-left: auto; }
     .trend-rising  { color: #ff8844 !important; }
     .trend-falling { color: #44cc88 !important; }
     .trend-stable  { color: #555 !important; }
@@ -210,9 +288,7 @@
       overflow-y: auto;
     }
 
-    #critical-log-section {
-      margin-top: 2px;
-    }
+    #critical-log-section { margin-top: 2px; }
     #critical-log-label {
       font-size: 0.65rem;
       color: #333;
@@ -233,10 +309,7 @@
       line-height: 1.6;
     }
 
-    /* ── Debug (collapsed) ── */
-    #debug-section {
-      margin-top: 2px;
-    }
+    #debug-section { margin-top: 2px; }
     #debug-section summary {
       font-size: 0.65rem;
       color: #333;
@@ -267,13 +340,13 @@
       color: #555;
     }
 
-    .field-high    { color: #ff4444; }
+    .field-high     { color: #ff4444; }
     .field-moderate { color: #ffaa44; }
-    .field-ok      { color: #44ff88; }
-    .field-label   { color: #444; }
+    .field-ok       { color: #44ff88; }
+    .field-label    { color: #444; }
+    .btn-recording  { border-color: #ff4444 !important; color: #ff4444 !important; }
 
-    .btn-recording { border-color: #ff4444 !important; color: #ff4444 !important; }
-
+    /* ── Audio section ── */
     #audio-section {
       flex: 2;
       min-width: 0;
@@ -382,26 +455,34 @@
   </style>
 </head>
 <body>
-  <h1>Dispatch AI — Demo</h1>
 
-  <!-- Video file picker -->
-  <div id="file-row">
-    <label for="video-file">Demo video:</label>
-    <input type="file" id="video-file" accept="video/*" />
-    <span id="file-hint" style="font-size:0.7rem;color:#444;">Select a video file, then click Start</span>
+  <!-- ── Incoming call screen ── -->
+  <div id="call-screen">
+    <div id="call-brand">Dispatch AI</div>
+    <div id="call-type">Incoming Call</div>
+    <div id="call-name">Emergency Feed</div>
+    <div id="call-sub">Line 1 &nbsp;·&nbsp; Live Video</div>
+    <div id="phone-wrap">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+      <div id="phone-icon">📞</div>
+    </div>
+    <button id="btn-accept">Accept</button>
   </div>
 
+  <!-- ── Main dashboard ── -->
+  <h1>Dispatch AI — Live Feed</h1>
+
   <div id="main-row">
-    <!-- Left: video + frame analysis -->
     <div id="left-col">
       <div id="controls">
-        <button id="btn-start">Start</button>
-        <button id="btn-stop" disabled>Stop</button>
-        <button id="btn-model">Fast (Haiku)</button>
-        <div id="status">Select a video to begin.</div>
+        <button id="btn-stop" disabled>End Call</button>
+        <div id="status">—</div>
       </div>
       <video id="video" playsinline muted controls></video>
       <canvas id="canvas"></canvas>
+
       <div id="glance-panel">
         <div id="severity-row">
           <div class="severity-dot sev-unknown" id="severity-dot"></div>
@@ -428,7 +509,6 @@
       </details>
     </div>
 
-    <!-- Right: transcript + language -->
     <div id="audio-section">
       <div id="audio-header">
         <h2>Live Audio</h2>
@@ -455,7 +535,6 @@
   </div>
 
   <script>
-    // Point at the live_vision server. Change this if your server runs on a different port.
     const SERVER = "http://localhost:3000";
 
     const video     = document.getElementById("video");
@@ -463,28 +542,18 @@
     const ctx       = canvas.getContext("2d");
     const resultBox = document.getElementById("result-box");
     const statusEl  = document.getElementById("status");
-    const btnStart  = document.getElementById("btn-start");
     const btnStop   = document.getElementById("btn-stop");
-    const fileInput = document.getElementById("video-file");
-    const fileHint  = document.getElementById("file-hint");
 
     const INTERVAL_MS  = 1000;
     const JPEG_QUALITY = 0.45;
     const MAX_WIDTH    = 640;
+    const USE_HAIKU    = true;
 
     let intervalId     = null;
     let frameCount     = 0;
     let pendingRequest = false;
-    let useHaiku       = true;   // Haiku by default for speed
-    let objectUrl      = null;
 
     function setStatus(msg) { statusEl.textContent = msg; }
-
-    // Show filename once a file is selected
-    fileInput.addEventListener("change", () => {
-      const f = fileInput.files[0];
-      fileHint.textContent = f ? f.name : "No file selected";
-    });
 
     // ── Critical issues log ───────────────────────────────────────
     const criticalLog   = [];
@@ -542,8 +611,8 @@
     let lastAlertTime    = null;
     let lastAudioLogTime = 0;
 
-    const SEV_ORDER  = { stable: 0, elevated: 1, critical: 2 };
     const SEV_LEVELS = ["stable", "elevated", "critical"];
+    const SEV_ORDER  = { stable: 0, elevated: 1, critical: 2 };
     let peakSeverity    = 0;
     let belowPeakFrames = 0;
     const DEESCALATE_AFTER = 6;
@@ -570,9 +639,9 @@
       if (r.smoke_visible)             s += 25;
       if (r.objects?.weapons_visible)  s += 35;
       r.injuries?.forEach(i => {
-        if (i.severity === "high")     s += 25;
+        if (i.severity === "high")          s += 25;
         else if (i.severity === "moderate") s += 12;
-        if (i.bleeding)                s += 10;
+        if (i.bleeding)                     s += 10;
       });
       r.people?.forEach(p => {
         if (p.responsive === "unresponsive") s += 20;
@@ -604,8 +673,8 @@
       const videoContrib = videoRising || videoFalling;
 
       let trend = "stable";
-      if (videoRising || audioContrib) trend = "rising";
-      else if (videoFalling)           trend = "falling";
+      if (videoRising  || audioContrib) trend = "rising";
+      else if (videoFalling)            trend = "falling";
 
       return { trend, videoContrib, audioContrib };
     }
@@ -617,13 +686,13 @@
       if (r.objects?.weapons_visible)
         return `weapon — ${r.objects.weapon_types?.join(", ") || "visible"}`;
       const crit = r.injuries?.find(i => i.severity === "high");
-      if (crit)  return `critical injury — ${crit.body_part || crit.injury_type}`;
+      if (crit)   return `critical injury — ${crit.body_part || crit.injury_type}`;
       const unresp = r.people?.find(p => p.responsive === "unresponsive");
       if (unresp) return "person unresponsive";
       const bleed = r.injuries?.find(i => i.bleeding);
       if (bleed)  return `bleeding — ${bleed.body_part || "visible"}`;
       const mod = r.injuries?.find(i => i.severity === "moderate");
-      if (mod)   return `injury — ${mod.injury_type}`;
+      if (mod)    return `injury — ${mod.injury_type}`;
       if (r.scene?.structural_damage_visible) return "structural damage";
       if (r.hazards?.length) return r.hazards[0].replace(/_/g, " ");
       return null;
@@ -631,8 +700,7 @@
 
     function updateGlanceable(r) {
       const videoScore  = scoreSeverity(r);
-      const audioSignal = latestAudioSignal;
-      signalHistory.push({ videoScore, audioSignal });
+      signalHistory.push({ videoScore, audioSignal: latestAudioSignal });
       if (signalHistory.length > 12) signalHistory.shift();
 
       const level  = effectiveLevel(severityLevel(videoScore));
@@ -649,7 +717,7 @@
         if (videoContrib && hazard) parts.push(`video: ${hazard}`);
         else if (videoContrib)      parts.push("video: severity rising");
         if (audioContrib) {
-          const kws = audioSignal.distress_keywords_detected.slice(0, 3).join(", ");
+          const kws = latestAudioSignal.distress_keywords_detected.slice(0, 3).join(", ");
           parts.push(kws ? `audio: distress keywords (${kws})` : "audio: elevated tone");
         }
         return parts.length ? ` [${parts.join(", ")}]` : "";
@@ -657,9 +725,7 @@
 
       if (lastGlanceKey) {
         const [prevLevel, , prevHazard] = lastGlanceKey.split("|");
-        const sevOrder = { stable: 0, elevated: 1, critical: 2 };
-
-        if (sevOrder[level] > sevOrder[prevLevel]) {
+        if (SEV_ORDER[level] > SEV_ORDER[prevLevel]) {
           lastAlert     = `severity ${prevLevel} → ${level}`;
           lastAlertTime = Date.now();
           if (loggable)
@@ -681,11 +747,11 @@
       const hazardEl = document.getElementById("top-hazard");
       const alertEl  = document.getElementById("alert-line");
 
-      dot.className = `severity-dot sev-${level}`;
+      dot.className   = `severity-dot sev-${level}`;
       lbl.textContent = level.toUpperCase();
       lbl.className   = `text-${level}`;
 
-      const trendMap = { rising: "↑ rising", falling: "↓ falling", stable: "→ stable" };
+      const trendMap  = { rising: "↑ rising", falling: "↓ falling", stable: "→ stable" };
       trendEl.textContent = trendMap[trend] || "—";
       trendEl.className   = `trend-${trend}`;
 
@@ -694,7 +760,7 @@
 
       if (lastAlert) {
         const ago = Math.round((Date.now() - lastAlertTime) / 1000);
-        alertEl.textContent = `${lastAlert} — ${ago}s ago`;
+        alertEl.textContent   = `${lastAlert} — ${ago}s ago`;
         alertEl.style.display = "block";
       } else {
         alertEl.style.display = "none";
@@ -709,9 +775,7 @@
     }, 1000);
 
     // ── Frame rendering ───────────────────────────────────────────
-    function label(text) {
-      return `<span class="field-label">${text}</span>`;
-    }
+    function label(text) { return `<span class="field-label">${text}</span>`; }
 
     function severityClass(val) {
       if (val === "high")     return "field-high";
@@ -721,79 +785,58 @@
 
     function renderResult(r) {
       const lines = [];
-
       const qClass = r.frame_quality === "usable" ? "field-ok" : "field-moderate";
       lines.push(`${label("frame_quality  ")} <span class="${qClass}">${r.frame_quality}</span>   ${label("confidence")} ${(r.confidence * 100).toFixed(0)}%`);
 
       if (r.scene) {
         const s = r.scene;
-        lines.push("");
-        lines.push(`${label("── SCENE ──────────────────────────────")}`);
+        lines.push("", `${label("── SCENE ──────────────────────────────")}`);
         lines.push(`${label("environment    ")} ${s.environment ?? "—"}   ${label("location")} ${s.location_type ?? "—"}`);
         lines.push(`${label("lighting       ")} ${s.lighting ?? "—"}   ${label("weather")} ${s.weather ?? "—"}`);
-        if (s.structural_damage_visible) {
+        if (s.structural_damage_visible)
           lines.push(`${label("structure dmg  ")} <span class="field-high">YES — ${s.structural_damage_description ?? "visible"}</span>`);
-        }
       }
 
-      if (r.people && r.people.length) {
-        lines.push("");
-        lines.push(`${label("── PEOPLE (" + r.people.length + ") ─────────────────────────")}`);
+      if (r.people?.length) {
+        lines.push("", `${label("── PEOPLE (" + r.people.length + ") ─────────────────────────")}`);
         r.people.forEach(p => {
-          const distClass = p.distress_level === "severe" ? "field-high"
-                          : p.distress_level === "moderate" ? "field-moderate" : "field-ok";
-          const respClass = p.responsive === "unresponsive" ? "field-high" : "field-ok";
+          const dC = p.distress_level === "severe" ? "field-high" : p.distress_level === "moderate" ? "field-moderate" : "field-ok";
+          const rC = p.responsive === "unresponsive" ? "field-high" : "field-ok";
           lines.push(`${label("  [" + p.id + "] ")}${p.age_estimate} · ${p.position} · ${p.motion} · role: ${p.role_estimate}`);
-          lines.push(`      ${label("responsive")} <span class="${respClass}">${p.responsive}</span>   ${label("distress")} <span class="${distClass}">${p.distress_level ?? "—"}</span>`);
+          lines.push(`      ${label("responsive")} <span class="${rC}">${p.responsive}</span>   ${label("distress")} <span class="${dC}">${p.distress_level ?? "—"}</span>`);
         });
       } else {
         lines.push(`${label("people         ")} none detected`);
       }
 
-      if (r.injuries && r.injuries.length) {
-        lines.push("");
-        lines.push(`${label("── INJURIES ────────────────────────────")}`);
+      if (r.injuries?.length) {
+        lines.push("", `${label("── INJURIES ────────────────────────────")}`);
         r.injuries.forEach(inj => {
-          const sevClass = severityClass(inj.severity);
-          const bleedTxt = inj.bleeding ? " <span class='field-high'>+ bleeding</span>" : "";
-          lines.push(`  ${label("person " + inj.person_id)} <span class="${sevClass}">${inj.injury_type}</span> · ${inj.body_part ?? "unknown location"} · sev: <span class="${sevClass}">${inj.severity}</span>${bleedTxt}`);
+          const sC = severityClass(inj.severity);
+          const bT = inj.bleeding ? " <span class='field-high'>+ bleeding</span>" : "";
+          lines.push(`  ${label("person " + inj.person_id)} <span class="${sC}">${inj.injury_type}</span> · ${inj.body_part ?? "unknown location"} · sev: <span class="${sC}">${inj.severity}</span>${bT}`);
         });
       }
 
       if (r.objects) {
         const obj = r.objects;
-        const hasObj = obj.vehicles?.length || obj.weapons_visible || obj.medical_equipment_visible || obj.notable_objects?.length;
-        if (hasObj) {
-          lines.push("");
-          lines.push(`${label("── OBJECTS ─────────────────────────────")}`);
-          if (obj.vehicles?.length) {
-            const dmg = obj.vehicle_damage_visible ? " <span class='field-high'>(damaged)</span>" : "";
-            lines.push(`  ${label("vehicles       ")} ${obj.vehicles.join(", ")}${dmg}`);
-          }
-          if (obj.weapons_visible) {
-            lines.push(`  ${label("weapons        ")} <span class="field-high">${obj.weapon_types?.join(", ") || "visible"}</span>`);
-          }
-          if (obj.medical_equipment_visible) {
-            lines.push(`  ${label("medical equip  ")} ${obj.medical_equipment_types?.join(", ") || "visible"}`);
-          }
-          if (obj.notable_objects?.length) {
-            lines.push(`  ${label("notable        ")} ${obj.notable_objects.join(", ")}`);
-          }
+        if (obj.vehicles?.length || obj.weapons_visible || obj.medical_equipment_visible || obj.notable_objects?.length) {
+          lines.push("", `${label("── OBJECTS ─────────────────────────────")}`);
+          if (obj.vehicles?.length) lines.push(`  ${label("vehicles       ")} ${obj.vehicles.join(", ")}${obj.vehicle_damage_visible ? " <span class='field-high'>(damaged)</span>" : ""}`);
+          if (obj.weapons_visible)  lines.push(`  ${label("weapons        ")} <span class="field-high">${obj.weapon_types?.join(", ") || "visible"}</span>`);
+          if (obj.medical_equipment_visible) lines.push(`  ${label("medical equip  ")} ${obj.medical_equipment_types?.join(", ") || "visible"}`);
+          if (obj.notable_objects?.length)   lines.push(`  ${label("notable        ")} ${obj.notable_objects.join(", ")}`);
         }
       }
 
-      const hazards  = r.hazards?.length ? r.hazards.join(", ") : "none";
-      const hazClass = r.hazards?.length ? "field-high" : "field-ok";
-      const fireClass = (r.fire_visible || r.smoke_visible) ? "field-high" : "field-ok";
-      lines.push("");
-      lines.push(`${label("── HAZARDS ─────────────────────────────")}`);
-      lines.push(`  ${label("fire / smoke   ")} <span class="${fireClass}">${r.fire_visible} / ${r.smoke_visible}</span>`);
-      lines.push(`  ${label("hazards        ")} <span class="${hazClass}">${hazards}</span>`);
-
-      if (r.quality_issues?.length) {
+      const haz  = r.hazards?.length ? r.hazards.join(", ") : "none";
+      const hC   = r.hazards?.length ? "field-high" : "field-ok";
+      const fC   = (r.fire_visible || r.smoke_visible) ? "field-high" : "field-ok";
+      lines.push("", `${label("── HAZARDS ─────────────────────────────")}`);
+      lines.push(`  ${label("fire / smoke   ")} <span class="${fC}">${r.fire_visible} / ${r.smoke_visible}</span>`);
+      lines.push(`  ${label("hazards        ")} <span class="${hC}">${haz}</span>`);
+      if (r.quality_issues?.length)
         lines.push(`  ${label("quality issues  ")} ${r.quality_issues.join(", ")}`);
-      }
-
       if (r.notes) lines.push(`\n${label("notes: ")}${r.notes}`);
       lines.push(`${label("timestamp: ")}${r.timestamp}`);
 
@@ -810,9 +853,7 @@
       canvas.height = Math.round(video.videoHeight * scale);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
-      const base64  = dataUrl.split(",")[1];
-
+      const base64 = canvas.toDataURL("image/jpeg", JPEG_QUALITY).split(",")[1];
       frameCount++;
       const fc = frameCount;
       setStatus(`frame ${fc} — sending…`);
@@ -822,9 +863,8 @@
         const resp = await fetch(`${SERVER}/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
-          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg", model: useHaiku ? "haiku" : "sonnet", audioSignal: latestAudioSignal }),
+          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg", model: USE_HAIKU ? "haiku" : "sonnet", audioSignal: latestAudioSignal }),
         });
-
         const body = await resp.json();
         pendingRequest = false;
 
@@ -834,11 +874,11 @@
           const triageText = body.triage?.triage || body.triage?.last_triage;
           if (triageText) {
             document.getElementById("triage-panel").style.display = "block";
-            document.getElementById("triage-text").textContent = triageText;
+            document.getElementById("triage-text").textContent    = triageText;
           }
           setStatus(`frame ${fc} — ok`);
         } else {
-          setStatus(`frame ${fc} — error (see debug)`);
+          setStatus(`frame ${fc} — error`);
         }
       } catch (err) {
         pendingRequest = false;
@@ -846,90 +886,57 @@
       }
     }
 
-    // ── Video file loading + playback ─────────────────────────────
-    async function startCapture() {
-      const file = fileInput.files[0];
-
-      // If user picked a file, load it; otherwise use the auto-loaded src
-      if (file) {
-        if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-        objectUrl  = URL.createObjectURL(file);
-        video.src  = objectUrl;
-      } else if (!video.src) {
-        setStatus("No video selected — use the file picker above.");
-        return;
-      }
-
+    // ── Start / stop ──────────────────────────────────────────────
+    async function startFeed() {
       video.loop  = true;
       video.muted = true;
-
       try {
         await video.play();
       } catch (err) {
         setStatus(`Playback error: ${err.message}`);
         return;
       }
-
-      btnStart.disabled = true;
-      btnStop.disabled  = false;
-      setStatus("Playing — capturing frames every 1 s…");
-
+      btnStop.disabled = false;
+      setStatus("Live — capturing frames…");
       intervalId = setInterval(captureAndSend, INTERVAL_MS);
+      startListening();
     }
 
-    function stopCapture() {
+    function stopFeed() {
       clearInterval(intervalId);
       intervalId = null;
-
       video.pause();
-      video.src = "";
-      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
-
-      btnStart.disabled = false;
-      btnStop.disabled  = true;
-      setStatus("Stopped.");
+      btnStop.disabled = true;
+      setStatus("Ended.");
+      stopListening();
     }
 
-    btnStart.addEventListener("click", startCapture);
-    btnStop.addEventListener("click",  stopCapture);
+    btnStop.addEventListener("click", stopFeed);
 
-    // Start in Haiku mode — update button label to match
-    const btnModel = document.getElementById("btn-model");
-    btnModel.textContent    = "Accurate (Sonnet)";
-    btnModel.style.color    = "#ffaa44";
-    btnModel.style.borderColor = "#ffaa44";
+    // ── Calling screen — accept button ────────────────────────────
+    const callScreen = document.getElementById("call-screen");
 
-    btnModel.addEventListener("click", () => {
-      useHaiku = !useHaiku;
-      btnModel.textContent    = useHaiku ? "Accurate (Sonnet)" : "Fast (Haiku)";
-      btnModel.style.color    = useHaiku ? "#ffaa44" : "";
-      btnModel.style.borderColor = useHaiku ? "#ffaa44" : "";
+    // Pre-load the video silently while the call screen is showing
+    video.src = "DispatchAI - Small.mov";
+
+    document.getElementById("btn-accept").addEventListener("click", () => {
+      callScreen.classList.add("fade-out");
+      callScreen.addEventListener("animationend", () => {
+        callScreen.style.display = "none";
+        startFeed();
+      }, { once: true });
     });
 
-    // Auto-load the demo video if it's sitting next to this HTML file
-    (function autoLoad() {
-      const DEMO_FILE = "DispatchAI - Small.mov";
-      video.src = DEMO_FILE;
-      video.onerror = () => {
-        video.src = "";
-        fileHint.textContent = "Select the demo video below";
-      };
-      video.onloadedmetadata = () => {
-        fileHint.textContent = `${DEMO_FILE} — ready. Click Start.`;
-        setStatus("Video ready — click Start to begin.");
-      };
-    })();
-
     // ── Audio: transcript + language detection + translation ──────
-    const SpeechRecognition  = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const btnListen          = document.getElementById("btn-listen");
-    const btnTranslate       = document.getElementById("btn-translate");
-    const micStatus          = document.getElementById("mic-status");
-    const transcriptLive     = document.getElementById("transcript-live");
-    const langBar            = document.getElementById("lang-bar");
-    const langIndicator      = document.getElementById("lang-indicator");
-    const translationPanel   = document.getElementById("translation-panel");
-    const translationLive    = document.getElementById("translation-live");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btnListen         = document.getElementById("btn-listen");
+    const btnTranslate      = document.getElementById("btn-translate");
+    const micStatus         = document.getElementById("mic-status");
+    const transcriptLive    = document.getElementById("transcript-live");
+    const langBar           = document.getElementById("lang-bar");
+    const langIndicator     = document.getElementById("lang-indicator");
+    const translationPanel  = document.getElementById("translation-panel");
+    const translationLive   = document.getElementById("translation-live");
 
     let recognition     = null;
     let isListening     = false;
@@ -968,14 +975,13 @@
         currentLangCode = data.language_code || "";
 
         if (currentLangCode && currentLangCode !== "en") {
-          langIndicator.textContent =
-            `Caller speaking ${data.language} — ${Math.round((data.confidence || 0) * 100)}% confidence`;
-          langBar.style.display          = "flex";
-          langBar.style.flexDirection    = "column";
+          langIndicator.textContent       = `Caller speaking ${data.language} — ${Math.round((data.confidence || 0) * 100)}% confidence`;
+          langBar.style.display           = "flex";
+          langBar.style.flexDirection     = "column";
         } else {
-          langBar.style.display          = "none";
-          translationPanel.style.display = "none";
-          translateActive                = false;
+          langBar.style.display           = "none";
+          translationPanel.style.display  = "none";
+          translateActive                 = false;
         }
       } catch (_) {}
     }
@@ -992,25 +998,24 @@
         });
         const data = await resp.json();
         if (data.translation) {
-          translationLive.textContent  = data.translation;
-          translationLive.scrollTop    = translationLive.scrollHeight;
+          translationLive.textContent = data.translation;
+          translationLive.scrollTop   = translationLive.scrollHeight;
         }
       } catch (_) {}
     }
 
     function onNewSpeech() {
       latestAudioSignal = analyzeAudioSignal(fullTranscript);
-
       const sig = latestAudioSignal;
       const now = Date.now();
-      if (sig.tone === "elevated" && sig.distress_keywords_detected.length >= 1
-          && now - lastAudioLogTime > 8000) {
+
+      if (sig.tone === "elevated" && sig.distress_keywords_detected.length >= 1 && now - lastAudioLogTime > 8000) {
         lastAudioLogTime = now;
         const kws = sig.distress_keywords_detected.slice(0, 4).join(", ");
         appendLog(`audio distress: ${kws}`, sig.confidence);
         lastAlert     = `audio distress — ${kws}`;
         lastAlertTime = now;
-        document.getElementById("alert-line").textContent = `${lastAlert} — 0s ago`;
+        document.getElementById("alert-line").textContent   = `${lastAlert} — 0s ago`;
         document.getElementById("alert-line").style.display = "block";
         fetch(`${SERVER}/triage-audio`, {
           method: "POST",
@@ -1026,7 +1031,6 @@
 
       clearTimeout(detectTimer);
       detectTimer = setTimeout(runDetect, 3000);
-
       if (translateActive) {
         clearTimeout(translateTimer);
         translateTimer = setTimeout(runTranslate, 1200);
@@ -1034,10 +1038,7 @@
     }
 
     function startListening() {
-      if (!SpeechRecognition) {
-        setMicStatus("Not supported — use Chrome or Edge");
-        return;
-      }
+      if (!SpeechRecognition) { setMicStatus("Not supported — use Chrome"); return; }
       recognition = new SpeechRecognition();
       recognition.continuous     = true;
       recognition.interimResults = true;
@@ -1052,14 +1053,8 @@
         onNewSpeech();
       };
 
-      recognition.onerror = (e) => {
-        if (e.error === "no-speech") return;
-        setMicStatus(`mic error: ${e.error}`);
-      };
-
-      recognition.onend = () => {
-        if (isListening) try { recognition.start(); } catch (_) {}
-      };
+      recognition.onerror = (e) => { if (e.error !== "no-speech") setMicStatus(`mic error: ${e.error}`); };
+      recognition.onend   = () => { if (isListening) try { recognition.start(); } catch (_) {} };
 
       recognition.start();
       isListening = true;
@@ -1079,9 +1074,7 @@
       setMicStatus("stopped");
     }
 
-    btnListen.addEventListener("click", () => {
-      isListening ? stopListening() : startListening();
-    });
+    btnListen.addEventListener("click", () => { isListening ? stopListening() : startListening(); });
 
     btnTranslate.addEventListener("click", () => {
       translateActive = !translateActive;
