@@ -1,6 +1,9 @@
 const Anthropic = require("@anthropic-ai/sdk");
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Read key at call time so dotenv timing doesn't matter
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 const SYSTEM_PROMPT = `You are a real-time vision analysis component embedded in a 911 emergency dispatch system. A bystander or victim is streaming live video from their phone. You will be shown ONE frame from that feed.
 
@@ -91,7 +94,7 @@ Required schema:
 }`;
 
 async function analyzeFrame(base64ImageData, mimeType = "image/jpeg", model = "claude-sonnet-4-6") {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model,
     max_tokens: 1536,
     system: SYSTEM_PROMPT,
