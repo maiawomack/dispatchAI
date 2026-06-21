@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispatch AI — Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Courier New", monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 16px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: #ff4444;
+      text-transform: uppercase;
+      padding-bottom: 30px;
+    }
+
+    button {
+      padding: 8px 20px;
+      border: 1px solid #444;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    button:hover { background: #2a2a2a; }
+    button:disabled { opacity: 0.35; cursor: default; }
+
+    #status { font-size: 0.75rem; color: #888; }
+
+    canvas { display: none; }
+
+    /* ── File picker row ── */
+    #file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #0f0f0f;
+      border: 1px solid #2a2a2a;
+      width: 100%;
+      max-width: 1280px;
+    }
+
+    #file-row label {
+      font-size: 0.73rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    #video-file {
+      flex: 1;
+      background: #111;
+      border: 1px solid #333;
+      color: #aaa;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 0.78rem;
+    }
+
+    #video-file::file-selector-button {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      color: #e0e0e0;
+      padding: 4px 12px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    #main-row {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 1280px;
+    }
+
+    #left-col {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #video {
+      width: 100%;
+      border: 1px solid #222;
+      display: block;
+    }
+
+    /* ── Glanceable panel ── */
+    #glance-panel {
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #severity-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .severity-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sev-stable   { background: #44ff88; box-shadow: 0 0 5px #44ff8888; }
+    .sev-elevated { background: #ffaa44; box-shadow: 0 0 5px #ffaa4488; }
+    .sev-critical { background: #ff4444; box-shadow: 0 0 7px #ff444488;
+                    animation: blink 1.2s ease-in-out infinite; }
+    .sev-unknown  { background: #333; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    #severity-label {
+      font-size: 0.82rem;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .sev-stable   #severity-label, .text-stable   { color: #44ff88; }
+    .sev-elevated #severity-label, .text-elevated { color: #ffaa44; }
+    .sev-critical #severity-label, .text-critical { color: #ff4444; }
+
+    #trend-label {
+      font-size: 0.75rem;
+      color: #555;
+      margin-left: auto;
+    }
+    .trend-rising  { color: #ff8844 !important; }
+    .trend-falling { color: #44cc88 !important; }
+    .trend-stable  { color: #555 !important; }
+
+    #top-hazard {
+      font-size: 0.78rem;
+      color: #ffaa44;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: none;
+    }
+
+    #alert-line {
+      font-size: 0.73rem;
+      color: #ff5555;
+      border-left: 2px solid #ff5555;
+      padding-left: 8px;
+      display: none;
+    }
+
+    /* ── Triage panel ── */
+    #triage-panel {
+      background: #0a0d14;
+      border: 1px solid #2a3a5a;
+      border-left: 3px solid #4466cc;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    #triage-panel-label {
+      font-size: 0.63rem;
+      letter-spacing: 0.1em;
+      color: #4466cc;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    #triage-text {
+      font-family: "SF Mono", "Fira Mono", monospace;
+      font-size: 0.76rem;
+      color: #99b8ee;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.55;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    #critical-log-section {
+      margin-top: 2px;
+    }
+    #critical-log-label {
+      font-size: 0.65rem;
+      color: #333;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+    #critical-log {
+      background: #080808;
+      border: 1px solid #1a1a1a;
+      padding: 8px 10px;
+      font-size: 0.68rem;
+      font-family: "Courier New", monospace;
+      color: #555;
+      max-height: 110px;
+      overflow-y: auto;
+      white-space: pre;
+      line-height: 1.6;
+    }
+
+    /* ── Debug (collapsed) ── */
+    #debug-section {
+      margin-top: 2px;
+    }
+    #debug-section summary {
+      font-size: 0.65rem;
+      color: #333;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    #debug-section summary:hover { color: #555; }
+    #debug-section summary::before { content: "▶"; font-size: 0.55rem; }
+    #debug-section[open] summary::before { content: "▼"; }
+
+    #result-box {
+      background: #080808;
+      border: 1px solid #1a1a1a;
+      padding: 12px;
+      font-size: 0.72rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 320px;
+      overflow-y: auto;
+      margin-top: 6px;
+      color: #555;
+    }
+
+    .field-high    { color: #ff4444; }
+    .field-moderate { color: #ffaa44; }
+    .field-ok      { color: #44ff88; }
+    .field-label   { color: #444; }
+
+    .btn-recording { border-color: #ff4444 !important; color: #ff4444 !important; }
+
+    #audio-section {
+      flex: 2;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0.85;
+    }
+
+    #audio-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+
+    #audio-header h2 {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    #mic-status { font-size: 0.72rem; color: #666; margin-left: auto; }
+
+    .panel-label {
+      font-size: 0.68rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    #transcript-live {
+      background: #111;
+      border: 1px solid #333;
+      padding: 12px;
+      font-size: 0.88rem;
+      line-height: 1.8;
+      min-height: 320px;
+      max-height: 480px;
+      overflow-y: auto;
+      color: #ddd;
+      word-break: break-word;
+      flex: 1;
+    }
+
+    .interim { color: #4a4a4a; }
+
+    #audio-body {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    #transcript-panel {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #lang-side {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    #lang-bar {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #1a1100;
+      border: 1px solid #554400;
+    }
+
+    #lang-indicator {
+      font-size: 0.8rem;
+      color: #ffaa44;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    #translation-panel {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #translation-live {
+      background: #0a110a;
+      border: 1px solid #334433;
+      padding: 12px;
+      font-size: 0.88rem;
+      line-height: 1.8;
+      color: #88cc88;
+      flex: 1;
+      min-height: 80px;
+      overflow-y: auto;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dispatch AI — Demo</h1>
+
+  <!-- Video file picker -->
+  <div id="file-row">
+    <label for="video-file">Demo video:</label>
+    <input type="file" id="video-file" accept="video/*" />
+    <span id="file-hint" style="font-size:0.7rem;color:#444;">Select a video file, then click Start</span>
+  </div>
+
+  <div id="main-row">
+    <!-- Left: video + frame analysis -->
+    <div id="left-col">
+      <div id="controls">
+        <button id="btn-start">Start</button>
+        <button id="btn-stop" disabled>Stop</button>
+        <button id="btn-model">Fast (Haiku)</button>
+        <div id="status">Select a video to begin.</div>
+      </div>
+      <video id="video" playsinline muted controls></video>
+      <canvas id="canvas"></canvas>
+      <div id="glance-panel">
+        <div id="severity-row">
+          <div class="severity-dot sev-unknown" id="severity-dot"></div>
+          <span id="severity-label" class="text-unknown">—</span>
+          <span id="trend-label">—</span>
+        </div>
+        <div id="top-hazard"></div>
+        <div id="alert-line"></div>
+      </div>
+
+      <div id="triage-panel">
+        <div id="triage-panel-label">Dispatch Triage Alert</div>
+        <pre id="triage-text"></pre>
+      </div>
+
+      <div id="critical-log-section">
+        <div id="critical-log-label">Critical Issues Log</div>
+        <div id="critical-log"></div>
+      </div>
+
+      <details id="debug-section">
+        <summary>Frame debug</summary>
+        <div id="result-box">—</div>
+      </details>
+    </div>
+
+    <!-- Right: transcript + language -->
+    <div id="audio-section">
+      <div id="audio-header">
+        <h2>Live Audio</h2>
+        <button id="btn-listen">Start Listening</button>
+        <div id="mic-status"></div>
+      </div>
+      <div id="audio-body">
+        <div id="transcript-panel">
+          <div class="panel-label">Live Transcript</div>
+          <div id="transcript-live">—</div>
+        </div>
+        <div id="lang-side">
+          <div id="lang-bar">
+            <span id="lang-indicator"></span>
+            <button id="btn-translate">Live Translate</button>
+          </div>
+          <div id="translation-panel">
+            <div class="panel-label">English Translation</div>
+            <div id="translation-live"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Point at the live_vision server. Change this if your server runs on a different port.
+    const SERVER = "http://localhost:3000";
+
+    const video     = document.getElementById("video");
+    const canvas    = document.getElementById("canvas");
+    const ctx       = canvas.getContext("2d");
+    const resultBox = document.getElementById("result-box");
+    const statusEl  = document.getElementById("status");
+    const btnStart  = document.getElementById("btn-start");
+    const btnStop   = document.getElementById("btn-stop");
+    const fileInput = document.getElementById("video-file");
+    const fileHint  = document.getElementById("file-hint");
+
+    const INTERVAL_MS  = 1000;
+    const JPEG_QUALITY = 0.65;
+    const MAX_WIDTH    = 640;
+
+    let intervalId     = null;
+    let frameCount     = 0;
+    let pendingRequest = false;
+    let useHaiku       = false;
+    let objectUrl      = null;
+
+    function setStatus(msg) { statusEl.textContent = msg; }
+
+    // Show filename once a file is selected
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files[0];
+      fileHint.textContent = f ? f.name : "No file selected";
+    });
+
+    // ── Critical issues log ───────────────────────────────────────
+    const criticalLog   = [];
+    const criticalLogEl = document.getElementById("critical-log");
+
+    function timeStr() {
+      return new Date().toLocaleTimeString("en-US", { hour12: false });
+    }
+
+    function appendLog(what, conf) {
+      const entry = `${timeStr()} — ${what}, conf ${conf != null ? conf.toFixed(2) : "—"}`;
+      criticalLog.unshift(entry);
+      if (criticalLog.length > 100) criticalLog.pop();
+      criticalLogEl.textContent = criticalLog.join("\n");
+    }
+
+    // ── Glanceable panel ──────────────────────────────────────────
+    const DISTRESS_KEYWORDS = [
+      "help", "please", "hurry", "scared", "bleeding", "can't breathe",
+      "cannot breathe", "dying", "dead", "gun", "knife", "weapon", "attack",
+      "hitting", "choking", "pain", "hurts", "hurt", "emergency", "police",
+      "fire", "stuck", "trapped", "unconscious", "fainted", "crash", "accident",
+      "shot", "stabbed", "assault", "danger", "run", "hide", "locked",
+      "can't move", "cannot move", "stop", "don't touch", "leave me"
+    ];
+
+    function analyzeAudioSignal(text) {
+      if (!text || text.trim().length < 3)
+        return { distress_keywords_detected: [], tone: "unknown", confidence: 0 };
+
+      const lower    = text.toLowerCase();
+      const detected = DISTRESS_KEYWORDS.filter(kw => lower.includes(kw));
+      let toneScore  = 0;
+
+      const capsWords = text.split(/\s+/).filter(w => w.length > 2 && w === w.toUpperCase() && /[A-Z]/.test(w));
+      toneScore += Math.min(capsWords.length * 2, 8);
+      toneScore += Math.min((text.match(/!/g) || []).length * 2, 6);
+
+      const words = lower.split(/\s+/);
+      const freq  = {};
+      words.forEach(w => { if (w.length > 2) freq[w] = (freq[w] || 0) + 1; });
+      if (Math.max(0, ...Object.values(freq)) >= 3) toneScore += 4;
+      toneScore += detected.length * 3;
+
+      return {
+        distress_keywords_detected: detected,
+        tone: toneScore >= 5 ? "elevated" : "calm",
+        confidence: Math.min(0.3 + detected.length * 0.12 + toneScore * 0.03, 0.92),
+      };
+    }
+
+    const signalHistory  = [];
+    let lastGlanceKey    = null;
+    let lastAlert        = null;
+    let lastAlertTime    = null;
+    let lastAudioLogTime = 0;
+
+    const SEV_ORDER  = { stable: 0, elevated: 1, critical: 2 };
+    const SEV_LEVELS = ["stable", "elevated", "critical"];
+    let peakSeverity    = 0;
+    let belowPeakFrames = 0;
+    const DEESCALATE_AFTER = 6;
+
+    function effectiveLevel(rawLevel) {
+      const raw = SEV_ORDER[rawLevel] ?? 0;
+      if (raw >= peakSeverity) {
+        peakSeverity    = raw;
+        belowPeakFrames = 0;
+        return rawLevel;
+      }
+      belowPeakFrames++;
+      if (belowPeakFrames >= DEESCALATE_AFTER) {
+        peakSeverity    = Math.max(raw, peakSeverity - 1);
+        belowPeakFrames = 0;
+      }
+      return SEV_LEVELS[peakSeverity];
+    }
+
+    function scoreSeverity(r) {
+      let s = 0;
+      if (r.silent_distress)           s += 50;
+      if (r.fire_visible)              s += 40;
+      if (r.smoke_visible)             s += 25;
+      if (r.objects?.weapons_visible)  s += 35;
+      r.injuries?.forEach(i => {
+        if (i.severity === "high")     s += 25;
+        else if (i.severity === "moderate") s += 12;
+        if (i.bleeding)                s += 10;
+      });
+      r.people?.forEach(p => {
+        if (p.responsive === "unresponsive") s += 20;
+        if (p.distress_level === "severe")   s += 8;
+      });
+      if (r.scene?.structural_damage_visible) s += 12;
+      return s;
+    }
+
+    function severityLevel(score) {
+      if (score >= 45) return "critical";
+      if (score >= 15) return "elevated";
+      return "stable";
+    }
+
+    function computeCombinedTrend() {
+      const curAudio     = latestAudioSignal;
+      const audioContrib = curAudio.tone === "elevated" && curAudio.distress_keywords_detected.length >= 1;
+
+      if (signalHistory.length < 4) {
+        return { trend: audioContrib ? "rising" : "stable", videoContrib: false, audioContrib };
+      }
+
+      const half       = Math.floor(signalHistory.length / 2);
+      const olderAvg   = signalHistory.slice(0, half).reduce((a, e) => a + e.videoScore, 0) / half;
+      const recentAvg  = signalHistory.slice(half).reduce((a, e) => a + e.videoScore, 0) / (signalHistory.length - half);
+      const videoRising  = recentAvg > olderAvg + 6;
+      const videoFalling = recentAvg < olderAvg - 6;
+      const videoContrib = videoRising || videoFalling;
+
+      let trend = "stable";
+      if (videoRising || audioContrib) trend = "rising";
+      else if (videoFalling)           trend = "falling";
+
+      return { trend, videoContrib, audioContrib };
+    }
+
+    function getTopHazard(r) {
+      if (r.silent_distress) return `silent distress — ${r.silent_distress_description || "visual signal detected"}`;
+      if (r.fire_visible)    return "fire detected";
+      if (r.smoke_visible)   return "smoke detected";
+      if (r.objects?.weapons_visible)
+        return `weapon — ${r.objects.weapon_types?.join(", ") || "visible"}`;
+      const crit = r.injuries?.find(i => i.severity === "high");
+      if (crit)  return `critical injury — ${crit.body_part || crit.injury_type}`;
+      const unresp = r.people?.find(p => p.responsive === "unresponsive");
+      if (unresp) return "person unresponsive";
+      const bleed = r.injuries?.find(i => i.bleeding);
+      if (bleed)  return `bleeding — ${bleed.body_part || "visible"}`;
+      const mod = r.injuries?.find(i => i.severity === "moderate");
+      if (mod)   return `injury — ${mod.injury_type}`;
+      if (r.scene?.structural_damage_visible) return "structural damage";
+      if (r.hazards?.length) return r.hazards[0].replace(/_/g, " ");
+      return null;
+    }
+
+    function updateGlanceable(r) {
+      const videoScore  = scoreSeverity(r);
+      const audioSignal = latestAudioSignal;
+      signalHistory.push({ videoScore, audioSignal });
+      if (signalHistory.length > 12) signalHistory.shift();
+
+      const level  = effectiveLevel(severityLevel(videoScore));
+      const { trend, videoContrib, audioContrib } = computeCombinedTrend();
+      const hazard = getTopHazard(r);
+      const key    = `${level}|${trend}|${hazard || ""}`;
+
+      if (key === lastGlanceKey) return;
+
+      const loggable = r.frame_quality === "usable" && (r.confidence || 0) > 0.6;
+
+      function signalAttrib() {
+        const parts = [];
+        if (videoContrib && hazard) parts.push(`video: ${hazard}`);
+        else if (videoContrib)      parts.push("video: severity rising");
+        if (audioContrib) {
+          const kws = audioSignal.distress_keywords_detected.slice(0, 3).join(", ");
+          parts.push(kws ? `audio: distress keywords (${kws})` : "audio: elevated tone");
+        }
+        return parts.length ? ` [${parts.join(", ")}]` : "";
+      }
+
+      if (lastGlanceKey) {
+        const [prevLevel, , prevHazard] = lastGlanceKey.split("|");
+        const sevOrder = { stable: 0, elevated: 1, critical: 2 };
+
+        if (sevOrder[level] > sevOrder[prevLevel]) {
+          lastAlert     = `severity ${prevLevel} → ${level}`;
+          lastAlertTime = Date.now();
+          if (loggable)
+            appendLog(`severity: ${prevLevel} → ${level}${hazard ? ` (${hazard})` : ""}${signalAttrib()}`, r.confidence);
+        } else if (hazard && hazard !== prevHazard) {
+          lastAlert     = hazard;
+          lastAlertTime = Date.now();
+          if (loggable)
+            appendLog(`new hazard: ${hazard}${signalAttrib()}`, r.confidence);
+        } else if (trend !== lastGlanceKey.split("|")[1] && loggable) {
+          appendLog(`trend: ${lastGlanceKey.split("|")[1]} → ${trend}${signalAttrib()}`, r.confidence);
+        }
+      }
+      lastGlanceKey = key;
+
+      const dot     = document.getElementById("severity-dot");
+      const lbl     = document.getElementById("severity-label");
+      const trendEl = document.getElementById("trend-label");
+      const hazardEl = document.getElementById("top-hazard");
+      const alertEl  = document.getElementById("alert-line");
+
+      dot.className = `severity-dot sev-${level}`;
+      lbl.textContent = level.toUpperCase();
+      lbl.className   = `text-${level}`;
+
+      const trendMap = { rising: "↑ rising", falling: "↓ falling", stable: "→ stable" };
+      trendEl.textContent = trendMap[trend] || "—";
+      trendEl.className   = `trend-${trend}`;
+
+      if (hazard) { hazardEl.textContent = hazard; hazardEl.style.display = "block"; }
+      else          { hazardEl.style.display = "none"; }
+
+      if (lastAlert) {
+        const ago = Math.round((Date.now() - lastAlertTime) / 1000);
+        alertEl.textContent = `${lastAlert} — ${ago}s ago`;
+        alertEl.style.display = "block";
+      } else {
+        alertEl.style.display = "none";
+      }
+    }
+
+    setInterval(() => {
+      if (!lastAlert) return;
+      const ago = Math.round((Date.now() - lastAlertTime) / 1000);
+      if (ago > 30) { lastAlert = null; document.getElementById("alert-line").style.display = "none"; return; }
+      document.getElementById("alert-line").textContent = `${lastAlert} — ${ago}s ago`;
+    }, 1000);
+
+    // ── Frame rendering ───────────────────────────────────────────
+    function label(text) {
+      return `<span class="field-label">${text}</span>`;
+    }
+
+    function severityClass(val) {
+      if (val === "high")     return "field-high";
+      if (val === "moderate") return "field-moderate";
+      return "field-ok";
+    }
+
+    function renderResult(r) {
+      const lines = [];
+
+      const qClass = r.frame_quality === "usable" ? "field-ok" : "field-moderate";
+      lines.push(`${label("frame_quality  ")} <span class="${qClass}">${r.frame_quality}</span>   ${label("confidence")} ${(r.confidence * 100).toFixed(0)}%`);
+
+      if (r.scene) {
+        const s = r.scene;
+        lines.push("");
+        lines.push(`${label("── SCENE ──────────────────────────────")}`);
+        lines.push(`${label("environment    ")} ${s.environment ?? "—"}   ${label("location")} ${s.location_type ?? "—"}`);
+        lines.push(`${label("lighting       ")} ${s.lighting ?? "—"}   ${label("weather")} ${s.weather ?? "—"}`);
+        if (s.structural_damage_visible) {
+          lines.push(`${label("structure dmg  ")} <span class="field-high">YES — ${s.structural_damage_description ?? "visible"}</span>`);
+        }
+      }
+
+      if (r.people && r.people.length) {
+        lines.push("");
+        lines.push(`${label("── PEOPLE (" + r.people.length + ") ─────────────────────────")}`);
+        r.people.forEach(p => {
+          const distClass = p.distress_level === "severe" ? "field-high"
+                          : p.distress_level === "moderate" ? "field-moderate" : "field-ok";
+          const respClass = p.responsive === "unresponsive" ? "field-high" : "field-ok";
+          lines.push(`${label("  [" + p.id + "] ")}${p.age_estimate} · ${p.position} · ${p.motion} · role: ${p.role_estimate}`);
+          lines.push(`      ${label("responsive")} <span class="${respClass}">${p.responsive}</span>   ${label("distress")} <span class="${distClass}">${p.distress_level ?? "—"}</span>`);
+        });
+      } else {
+        lines.push(`${label("people         ")} none detected`);
+      }
+
+      if (r.injuries && r.injuries.length) {
+        lines.push("");
+        lines.push(`${label("── INJURIES ────────────────────────────")}`);
+        r.injuries.forEach(inj => {
+          const sevClass = severityClass(inj.severity);
+          const bleedTxt = inj.bleeding ? " <span class='field-high'>+ bleeding</span>" : "";
+          lines.push(`  ${label("person " + inj.person_id)} <span class="${sevClass}">${inj.injury_type}</span> · ${inj.body_part ?? "unknown location"} · sev: <span class="${sevClass}">${inj.severity}</span>${bleedTxt}`);
+        });
+      }
+
+      if (r.objects) {
+        const obj = r.objects;
+        const hasObj = obj.vehicles?.length || obj.weapons_visible || obj.medical_equipment_visible || obj.notable_objects?.length;
+        if (hasObj) {
+          lines.push("");
+          lines.push(`${label("── OBJECTS ─────────────────────────────")}`);
+          if (obj.vehicles?.length) {
+            const dmg = obj.vehicle_damage_visible ? " <span class='field-high'>(damaged)</span>" : "";
+            lines.push(`  ${label("vehicles       ")} ${obj.vehicles.join(", ")}${dmg}`);
+          }
+          if (obj.weapons_visible) {
+            lines.push(`  ${label("weapons        ")} <span class="field-high">${obj.weapon_types?.join(", ") || "visible"}</span>`);
+          }
+          if (obj.medical_equipment_visible) {
+            lines.push(`  ${label("medical equip  ")} ${obj.medical_equipment_types?.join(", ") || "visible"}`);
+          }
+          if (obj.notable_objects?.length) {
+            lines.push(`  ${label("notable        ")} ${obj.notable_objects.join(", ")}`);
+          }
+        }
+      }
+
+      const hazards  = r.hazards?.length ? r.hazards.join(", ") : "none";
+      const hazClass = r.hazards?.length ? "field-high" : "field-ok";
+      const fireClass = (r.fire_visible || r.smoke_visible) ? "field-high" : "field-ok";
+      lines.push("");
+      lines.push(`${label("── HAZARDS ─────────────────────────────")}`);
+      lines.push(`  ${label("fire / smoke   ")} <span class="${fireClass}">${r.fire_visible} / ${r.smoke_visible}</span>`);
+      lines.push(`  ${label("hazards        ")} <span class="${hazClass}">${hazards}</span>`);
+
+      if (r.quality_issues?.length) {
+        lines.push(`  ${label("quality issues  ")} ${r.quality_issues.join(", ")}`);
+      }
+
+      if (r.notes) lines.push(`\n${label("notes: ")}${r.notes}`);
+      lines.push(`${label("timestamp: ")}${r.timestamp}`);
+
+      resultBox.innerHTML = lines.join("\n");
+    }
+
+    // ── Frame capture + send ──────────────────────────────────────
+    async function captureAndSend() {
+      if (pendingRequest) return;
+      if (!video.videoWidth || !video.videoHeight || video.readyState < 2) return;
+
+      const scale   = video.videoWidth > MAX_WIDTH ? MAX_WIDTH / video.videoWidth : 1;
+      canvas.width  = Math.round(video.videoWidth  * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+      const base64  = dataUrl.split(",")[1];
+
+      frameCount++;
+      const fc = frameCount;
+      setStatus(`frame ${fc} — sending…`);
+      pendingRequest = true;
+
+      try {
+        const resp = await fetch(`${SERVER}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg", model: useHaiku ? "haiku" : "sonnet", audioSignal: latestAudioSignal }),
+        });
+
+        const body = await resp.json();
+        pendingRequest = false;
+
+        if (body.ok) {
+          updateGlanceable(body.result);
+          renderResult(body.result);
+          const triageText = body.triage?.triage || body.triage?.last_triage;
+          if (triageText) {
+            document.getElementById("triage-panel").style.display = "block";
+            document.getElementById("triage-text").textContent = triageText;
+          }
+          setStatus(`frame ${fc} — ok`);
+        } else {
+          setStatus(`frame ${fc} — error (see debug)`);
+        }
+      } catch (err) {
+        pendingRequest = false;
+        setStatus(`frame ${fc} — fetch error: ${err.message}`);
+      }
+    }
+
+    // ── Video file loading + playback ─────────────────────────────
+    async function startCapture() {
+      const file = fileInput.files[0];
+      if (!file) {
+        setStatus("No video selected — use the file picker above.");
+        return;
+      }
+
+      // Release any previous object URL
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+
+      objectUrl   = URL.createObjectURL(file);
+      video.src   = objectUrl;
+      video.loop  = true;
+      video.muted = true;
+
+      try {
+        await video.play();
+      } catch (err) {
+        setStatus(`Playback error: ${err.message}`);
+        return;
+      }
+
+      btnStart.disabled = true;
+      btnStop.disabled  = false;
+      setStatus("Playing — capturing frames every 1 s…");
+
+      intervalId = setInterval(captureAndSend, INTERVAL_MS);
+    }
+
+    function stopCapture() {
+      clearInterval(intervalId);
+      intervalId = null;
+
+      video.pause();
+      video.src = "";
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+
+      btnStart.disabled = false;
+      btnStop.disabled  = true;
+      setStatus("Stopped.");
+    }
+
+    btnStart.addEventListener("click", startCapture);
+    btnStop.addEventListener("click",  stopCapture);
+
+    const btnModel = document.getElementById("btn-model");
+    btnModel.addEventListener("click", () => {
+      useHaiku = !useHaiku;
+      btnModel.textContent    = useHaiku ? "Accurate (Sonnet)" : "Fast (Haiku)";
+      btnModel.style.color    = useHaiku ? "#ffaa44" : "";
+      btnModel.style.borderColor = useHaiku ? "#ffaa44" : "";
+    });
+
+    // ── Audio: transcript + language detection + translation ──────
+    const SpeechRecognition  = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btnListen          = document.getElementById("btn-listen");
+    const btnTranslate       = document.getElementById("btn-translate");
+    const micStatus          = document.getElementById("mic-status");
+    const transcriptLive     = document.getElementById("transcript-live");
+    const langBar            = document.getElementById("lang-bar");
+    const langIndicator      = document.getElementById("lang-indicator");
+    const translationPanel   = document.getElementById("translation-panel");
+    const translationLive    = document.getElementById("translation-live");
+
+    let recognition     = null;
+    let isListening     = false;
+    let translateActive = false;
+    let fullTranscript  = "";
+    let lastTranslated  = "";
+    let currentLang     = "";
+    let currentLangCode = "";
+    let detectTimer     = null;
+    let translateTimer  = null;
+    let latestAudioSignal = { distress_keywords_detected: [], tone: "unknown", confidence: 0 };
+
+    function setMicStatus(msg) { micStatus.textContent = msg; }
+
+    function escHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function updateTranscriptDisplay(interim) {
+      transcriptLive.innerHTML = escHtml(fullTranscript) +
+        (interim ? `<span class="interim">${escHtml(interim)}</span>` : "");
+      transcriptLive.scrollTop = transcriptLive.scrollHeight;
+    }
+
+    async function runDetect() {
+      const text = fullTranscript.trim();
+      if (text.length < 5) return;
+      try {
+        const resp = await fetch(`${SERVER}/detect-language`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          body: JSON.stringify({ text: text.slice(-600) }),
+        });
+        const data = await resp.json();
+        currentLang     = data.language     || "Unknown";
+        currentLangCode = data.language_code || "";
+
+        if (currentLangCode && currentLangCode !== "en") {
+          langIndicator.textContent =
+            `Caller speaking ${data.language} — ${Math.round((data.confidence || 0) * 100)}% confidence`;
+          langBar.style.display          = "flex";
+          langBar.style.flexDirection    = "column";
+        } else {
+          langBar.style.display          = "none";
+          translationPanel.style.display = "none";
+          translateActive                = false;
+        }
+      } catch (_) {}
+    }
+
+    async function runTranslate() {
+      const text = fullTranscript.trim();
+      if (!text || text === lastTranslated) return;
+      lastTranslated = text;
+      try {
+        const resp = await fetch(`${SERVER}/translate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          body: JSON.stringify({ text: text.slice(-600), from_language: currentLang }),
+        });
+        const data = await resp.json();
+        if (data.translation) {
+          translationLive.textContent  = data.translation;
+          translationLive.scrollTop    = translationLive.scrollHeight;
+        }
+      } catch (_) {}
+    }
+
+    function onNewSpeech() {
+      latestAudioSignal = analyzeAudioSignal(fullTranscript);
+
+      const sig = latestAudioSignal;
+      const now = Date.now();
+      if (sig.tone === "elevated" && sig.distress_keywords_detected.length >= 1
+          && now - lastAudioLogTime > 8000) {
+        lastAudioLogTime = now;
+        const kws = sig.distress_keywords_detected.slice(0, 4).join(", ");
+        appendLog(`audio distress: ${kws}`, sig.confidence);
+        lastAlert     = `audio distress — ${kws}`;
+        lastAlertTime = now;
+        document.getElementById("alert-line").textContent = `${lastAlert} — 0s ago`;
+        document.getElementById("alert-line").style.display = "block";
+        fetch(`${SERVER}/triage-audio`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+          body: JSON.stringify({ audioSignal: sig, transcript: fullTranscript.slice(-400) }),
+        }).then(r => r.json()).then(t => {
+          if (t?.alert && t.triage) {
+            document.getElementById("triage-panel").style.display = "block";
+            document.getElementById("triage-text").textContent    = t.triage;
+          }
+        }).catch(() => {});
+      }
+
+      clearTimeout(detectTimer);
+      detectTimer = setTimeout(runDetect, 3000);
+
+      if (translateActive) {
+        clearTimeout(translateTimer);
+        translateTimer = setTimeout(runTranslate, 1200);
+      }
+    }
+
+    function startListening() {
+      if (!SpeechRecognition) {
+        setMicStatus("Not supported — use Chrome or Edge");
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.continuous     = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (e) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) fullTranscript += e.results[i][0].transcript + " ";
+          else interim += e.results[i][0].transcript;
+        }
+        updateTranscriptDisplay(interim);
+        onNewSpeech();
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error === "no-speech") return;
+        setMicStatus(`mic error: ${e.error}`);
+      };
+
+      recognition.onend = () => {
+        if (isListening) try { recognition.start(); } catch (_) {}
+      };
+
+      recognition.start();
+      isListening = true;
+      btnListen.textContent = "Stop Listening";
+      btnListen.classList.add("btn-recording");
+      setMicStatus("listening…");
+      transcriptLive.innerHTML = "";
+    }
+
+    function stopListening() {
+      isListening = false;
+      clearTimeout(detectTimer);
+      clearTimeout(translateTimer);
+      if (recognition) { recognition.stop(); recognition = null; }
+      btnListen.textContent = "Start Listening";
+      btnListen.classList.remove("btn-recording");
+      setMicStatus("stopped");
+    }
+
+    btnListen.addEventListener("click", () => {
+      isListening ? stopListening() : startListening();
+    });
+
+    btnTranslate.addEventListener("click", () => {
+      translateActive = !translateActive;
+      if (translateActive) {
+        translationPanel.style.display = "flex";
+        btnTranslate.textContent = "Stop Translating";
+        btnTranslate.classList.add("btn-recording");
+        runTranslate();
+      } else {
+        translationPanel.style.display = "none";
+        btnTranslate.textContent = "Live Translate";
+        btnTranslate.classList.remove("btn-recording");
+      }
+    });
+  </script>
+</body>
+</html>
