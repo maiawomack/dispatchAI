@@ -493,10 +493,32 @@ const statusEl  = document.getElementById("status");
 
     // Each entry: { videoScore, audioSignal }
     const signalHistory = [];
-    let lastGlanceKey   = null;
-    let lastAlert       = null;
-    let lastAlertTime   = null;
+    let lastGlanceKey    = null;
+    let lastAlert        = null;
+    let lastAlertTime    = null;
     let lastAudioLogTime = 0;
+
+    // Temporal severity floor — once escalated, hold level until sustained calm
+    const SEV_ORDER  = { stable: 0, elevated: 1, critical: 2 };
+    const SEV_LEVELS = ["stable", "elevated", "critical"];
+    let peakSeverity    = 0;  // highest level seen
+    let belowPeakFrames = 0;  // consecutive frames below peak
+    const DEESCALATE_AFTER = 6; // frames of sustained calm before dropping one level
+
+    function effectiveLevel(rawLevel) {
+      const raw = SEV_ORDER[rawLevel] ?? 0;
+      if (raw >= peakSeverity) {
+        peakSeverity    = raw;
+        belowPeakFrames = 0;
+        return rawLevel;
+      }
+      belowPeakFrames++;
+      if (belowPeakFrames >= DEESCALATE_AFTER) {
+        peakSeverity    = Math.max(raw, peakSeverity - 1);
+        belowPeakFrames = 0;
+      }
+      return SEV_LEVELS[peakSeverity];
+    }
 
     function scoreSeverity(r) {
       let s = 0;
@@ -572,7 +594,7 @@ const statusEl  = document.getElementById("status");
       signalHistory.push({ videoScore, audioSignal });
       if (signalHistory.length > 12) signalHistory.shift();
 
-      const level  = severityLevel(videoScore);
+      const level  = effectiveLevel(severityLevel(videoScore));
       const { trend, videoContrib, audioContrib } = computeCombinedTrend();
       const hazard = getTopHazard(r);
       const key    = `${level}|${trend}|${hazard || ""}`;

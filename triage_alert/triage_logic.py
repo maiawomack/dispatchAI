@@ -98,6 +98,7 @@ Flag as a significant change if ANY of the following are true:
 Do NOT flag as significant if:
 - Scene is nearly identical with only minor confidence fluctuation
 - Same hazards, same victim status, same urgency
+- Situation appears to have improved or de-escalated — dispatch has already been alerted and does not need a new alert for de-escalation; only escalation warrants a new dispatch alert
 
 Respond with only a JSON object, no extra text:
 {{
