@@ -1,0 +1,14 @@
+# # 1. Create a virtual environment
+# python -m venv venv
+
+# # 2. Activate it
+# .\venv\Scripts\Activate.ps1
+
+# # 3. Install all dependencies
+# pip install -r requirements.txt
+
+# # 4. Run the agent
+# python suggestor.py
+
+uagents==0.25.2
+anthropic==0.111.0
