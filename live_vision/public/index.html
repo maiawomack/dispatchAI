@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Vision 911 — Capture Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Courier New", monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 16px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: #ff4444;
+      text-transform: uppercase;
+    }
+
+    #controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      padding: 8px 20px;
+      border: 1px solid #444;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    button:hover { background: #2a2a2a; }
+    button:disabled { opacity: 0.35; cursor: default; }
+
+    #status {
+      font-size: 0.75rem;
+      color: #888;
+      height: 1.2em;
+    }
+
+    #video {
+      width: 480px;
+      max-width: 100%;
+      border: 1px solid #333;
+    }
+
+    canvas { display: none; }
+
+    #result-panel {
+      width: 480px;
+      max-width: 100%;
+    }
+
+    #result-panel h2 {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    #result-box {
+      background: #111;
+      border: 1px solid #333;
+      padding: 12px;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      min-height: 200px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    .field-high    { color: #ff4444; }
+    .field-moderate { color: #ffaa44; }
+    .field-ok      { color: #44ff88; }
+    .field-label   { color: #888; }
+
+    #log {
+      width: 480px;
+      max-width: 100%;
+    }
+
+    #log h2 {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    #log-box {
+      background: #111;
+      border: 1px solid #333;
+      padding: 12px;
+      font-size: 0.72rem;
+      line-height: 1.5;
+      max-height: 180px;
+      overflow-y: auto;
+      color: #666;
+    }
+
+    #log-box .entry { margin-bottom: 2px; }
+    #log-box .entry.err { color: #ff6666; }
+  </style>
+</head>
+<body>
+  <h1>Live Vision 911 — Capture Test</h1>
+
+  <div id="controls">
+    <button id="btn-start">Start Camera</button>
+    <button id="btn-stop" disabled>Stop</button>
+  </div>
+
+  <div id="status">idle</div>
+
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+
+  <div id="result-panel">
+    <h2>Latest Frame Analysis</h2>
+    <div id="result-box">—</div>
+  </div>
+
+  <div id="log">
+    <h2>Frame Log</h2>
+    <div id="log-box"></div>
+  </div>
+
+  <script>
+    const video   = document.getElementById("video");
+    const canvas  = document.getElementById("canvas");
+    const ctx     = canvas.getContext("2d");
+    const resultBox = document.getElementById("result-box");
+    const logBox    = document.getElementById("log-box");
+    const statusEl  = document.getElementById("status");
+    const btnStart  = document.getElementById("btn-start");
+    const btnStop   = document.getElementById("btn-stop");
+
+    const INTERVAL_MS = 2000;
+    const JPEG_QUALITY = 0.7;
+
+    let stream = null;
+    let intervalId = null;
+    let frameCount = 0;
+    let pendingRequest = false;
+
+    function setStatus(msg) { statusEl.textContent = msg; }
+
+    function addLog(msg, isErr = false) {
+      const el = document.createElement("div");
+      el.className = "entry" + (isErr ? " err" : "");
+      el.textContent = msg;
+      logBox.prepend(el);
+      // Keep last 50 entries
+      while (logBox.children.length > 50) logBox.removeChild(logBox.lastChild);
+    }
+
+    function severityClass(val) {
+      if (val === "high")     return "field-high";
+      if (val === "moderate") return "field-moderate";
+      return "field-ok";
+    }
+
+    function renderResult(r) {
+      const lines = [];
+
+      const qClass = (r.frame_quality === "usable") ? "field-ok" : "field-moderate";
+      lines.push(`<span class="field-label">frame_quality     </span><span class="${qClass}">${r.frame_quality}</span>`);
+      lines.push(`<span class="field-label">confidence        </span>${(r.confidence * 100).toFixed(0)}%`);
+      lines.push(`<span class="field-label">people_count      </span>${r.people_count ?? "—"}`);
+
+      const injClass = r.injury_visible ? severityClass(r.injury_severity_estimate) : "field-ok";
+      lines.push(`<span class="field-label">injury_visible    </span><span class="${injClass}">${r.injury_visible} (${r.injury_severity_estimate ?? "—"})</span>`);
+
+      const bleClass = r.bleeding_visible ? severityClass(r.bleeding_severity_estimate) : "field-ok";
+      lines.push(`<span class="field-label">bleeding_visible  </span><span class="${bleClass}">${r.bleeding_visible} (${r.bleeding_severity_estimate ?? "—"})</span>`);
+
+      const fireClass = (r.fire_visible || r.smoke_visible) ? "field-high" : "field-ok";
+      lines.push(`<span class="field-label">fire / smoke      </span><span class="${fireClass}">${r.fire_visible} / ${r.smoke_visible}</span>`);
+
+      lines.push(`<span class="field-label">person_motion     </span>${r.person_motion ?? "—"}`);
+      lines.push(`<span class="field-label">person_responsive </span>${r.person_responsive ?? "—"}`);
+
+      const hazards = (r.hazards && r.hazards.length) ? r.hazards.join(", ") : "none";
+      const hazClass = (r.hazards && r.hazards.length) ? "field-high" : "field-ok";
+      lines.push(`<span class="field-label">hazards           </span><span class="${hazClass}">${hazards}</span>`);
+
+      if (r.quality_issues && r.quality_issues.length) {
+        lines.push(`<span class="field-label">quality_issues    </span>${r.quality_issues.join(", ")}`);
+      }
+
+      if (r.notes) {
+        lines.push(`\n<span class="field-label">notes: </span>${r.notes}`);
+      }
+
+      lines.push(`\n<span class="field-label">timestamp: </span>${r.timestamp}`);
+
+      resultBox.innerHTML = lines.join("\n");
+    }
+
+    async function captureAndSend() {
+      if (pendingRequest) {
+        addLog("skipped — previous request still in flight");
+        return;
+      }
+
+      canvas.width  = video.videoWidth  || 640;
+      canvas.height = video.videoHeight || 480;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+      // Strip the data URI prefix
+      const base64 = dataUrl.split(",")[1];
+
+      frameCount++;
+      const fc = frameCount;
+      setStatus(`frame ${fc} — sending…`);
+      pendingRequest = true;
+
+      try {
+        const resp = await fetch("/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ frame: base64, mimeType: "image/jpeg" }),
+        });
+
+        const body = await resp.json();
+        pendingRequest = false;
+
+        if (body.ok) {
+          renderResult(body.result);
+          addLog(`frame ${fc} — quality=${body.result.frame_quality} conf=${(body.result.confidence * 100).toFixed(0)}%`);
+          setStatus(`frame ${fc} — ok`);
+        } else {
+          addLog(`frame ${fc} — error: ${body.error}`, true);
+          setStatus(`frame ${fc} — error (see log)`);
+        }
+      } catch (err) {
+        pendingRequest = false;
+        addLog(`frame ${fc} — fetch failed: ${err.message}`, true);
+        setStatus(`frame ${fc} — fetch error`);
+      }
+    }
+
+    async function startCapture() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        await video.play();
+
+        btnStart.disabled = true;
+        btnStop.disabled  = false;
+        setStatus("capturing — first frame in 2s…");
+        addLog("camera started");
+
+        intervalId = setInterval(captureAndSend, INTERVAL_MS);
+      } catch (err) {
+        setStatus(`camera error: ${err.message}`);
+        addLog(`camera error: ${err.message}`, true);
+      }
+    }
+
+    function stopCapture() {
+      clearInterval(intervalId);
+      intervalId = null;
+
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+
+      video.srcObject = null;
+      btnStart.disabled = false;
+      btnStop.disabled  = true;
+      setStatus("stopped");
+      addLog("capture stopped");
+    }
+
+    btnStart.addEventListener("click", startCapture);
+    btnStop.addEventListener("click",  stopCapture);
+  </script>
+</body>
+</html>
