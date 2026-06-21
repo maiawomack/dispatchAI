@@ -774,9 +774,10 @@ const statusEl  = document.getElementById("status");
         if (body.ok) {
           updateGlanceable(body.result);
           renderResult(body.result);
-          if (body.triage?.alert && body.triage.triage) {
+          const triageText = body.triage?.triage || body.triage?.last_triage;
+          if (triageText) {
             document.getElementById("triage-panel").style.display = "block";
-            document.getElementById("triage-text").textContent = body.triage.triage;
+            document.getElementById("triage-text").textContent = triageText;
           }
           setStatus(`frame ${fc} — ok`);
         } else {
