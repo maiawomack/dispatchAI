@@ -291,7 +291,7 @@ Respond with only a JSON object, no extra text:
 """
 
 client = anthropic.Anthropic(
-    api_key="INSERT_YOUR_CLAUDE_API_KEY_HERE"
+    api_key=""
 )
 
 agent = Agent(
@@ -299,6 +299,7 @@ agent = Agent(
     seed="triage_alert_seed_phrase",
     port=8001,
     endpoint=["http://localhost:8001/submit"],
+    network="testnet"
 )
 
 protocol = Protocol(spec=chat_protocol_spec)

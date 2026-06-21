@@ -1,0 +1,24 @@
+{
+    "last_scene": {
+        "people_count": 1,
+        "injury_visible": true,
+        "injury_severity_estimate": "high",
+        "injury_location": "head",
+        "bleeding_visible": true,
+        "bleeding_severity_estimate": "high",
+        "smoke_visible": true,
+        "fire_visible": true,
+        "person_motion": "still",
+        "person_responsive": "unresponsive",
+        "hazards": [
+            "fire",
+            "smoke",
+            "broken_glass"
+        ],
+        "frame_quality": "usable",
+        "quality_issues": [],
+        "confidence": 0.9,
+        "notes": "camera restored, one person visible and unresponsive on floor, second person no longer in frame, fire spreading, scene critical",
+        "timestamp": "2026-06-20T21:00:18.000Z"
+    }
+}
